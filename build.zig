@@ -8,41 +8,60 @@ const raylibFlags = &[_][]const u8{
 };
 
 pub fn build(b: *std.build.Builder) void {
-    const exe = b.addExecutable("cleartouch", "src/main.zig");
-
-    exe.addIncludeDir("raylib/include");
-    exe.addLibPath("raylib/lib");
-
     const target = b.standardTargetOptions(.{});
-    exe.setTarget(target);
-
     const mode = b.standardReleaseOptions();
-    exe.setBuildMode(mode);
 
-    exe.linkLibC();
-    exe.addIncludeDir("./lib/raylib/src");
-    exe.addIncludeDir("./lib/raylib/src/external/glfw/include");
-    exe.addCSourceFile("./lib/raylib/src/rcore.c", raylibFlags);
-    exe.addCSourceFile("./lib/raylib/src/rmodels.c", raylibFlags);
-    exe.addCSourceFile("./lib/raylib/src/raudio.c", raylibFlags);
-    exe.addCSourceFile("./lib/raylib/src/rshapes.c", raylibFlags);
-    exe.addCSourceFile("./lib/raylib/src/rtext.c", raylibFlags);
-    exe.addCSourceFile("./lib/raylib/src/rtextures.c", raylibFlags);
-    exe.addCSourceFile("./lib/raylib/src/utils.c", raylibFlags);
-    exe.addCSourceFile("./lib/raylib/src/rglfw.c", raylibFlags);
+    // Sandbox
 
-    exe.linkSystemLibrary("GL");
-    exe.linkSystemLibrary("rt");
-    exe.linkSystemLibrary("dl");
-    exe.linkSystemLibrary("m");
-    exe.linkSystemLibrary("X11");
+    const sandbox_exe = b.addExecutable("sandbox", "src/sandbox.zig");
 
-    exe.install();
+    sandbox_exe.setTarget(target);
 
-    // const compile_step = b.step("compile", "Compiles src/main.zig");
-    // compile_step.dependOn(&exe.step);
+    sandbox_exe.setBuildMode(mode);
 
-    const run_cmd = exe.run();
+    sandbox_exe.install();
+
+    const sandbox_cmd = sandbox_exe.run();
+    sandbox_cmd.step.dependOn(b.getInstallStep());
+    if (b.args) |args| {
+        sandbox_cmd.addArgs(args);
+    }
+
+    const sandbox_step = b.step("sandbox", "Run the sandbox");
+    sandbox_step.dependOn(&sandbox_cmd.step);
+
+    // Main
+
+    const main_exe = b.addExecutable("cleartouch", "src/main.zig");
+
+    main_exe.addIncludeDir("raylib/include");
+    main_exe.addLibPath("raylib/lib");
+
+    main_exe.setTarget(target);
+
+    main_exe.setBuildMode(mode);
+
+    main_exe.linkLibC();
+    main_exe.addIncludeDir("./lib/raylib/src");
+    main_exe.addIncludeDir("./lib/raylib/src/external/glfw/include");
+    main_exe.addCSourceFile("./lib/raylib/src/rcore.c", raylibFlags);
+    main_exe.addCSourceFile("./lib/raylib/src/rmodels.c", raylibFlags);
+    main_exe.addCSourceFile("./lib/raylib/src/raudio.c", raylibFlags);
+    main_exe.addCSourceFile("./lib/raylib/src/rshapes.c", raylibFlags);
+    main_exe.addCSourceFile("./lib/raylib/src/rtext.c", raylibFlags);
+    main_exe.addCSourceFile("./lib/raylib/src/rtextures.c", raylibFlags);
+    main_exe.addCSourceFile("./lib/raylib/src/utils.c", raylibFlags);
+    main_exe.addCSourceFile("./lib/raylib/src/rglfw.c", raylibFlags);
+
+    main_exe.linkSystemLibrary("GL");
+    main_exe.linkSystemLibrary("rt");
+    main_exe.linkSystemLibrary("dl");
+    main_exe.linkSystemLibrary("m");
+    main_exe.linkSystemLibrary("X11");
+
+    main_exe.install();
+
+    const run_cmd = main_exe.run();
     run_cmd.step.dependOn(b.getInstallStep());
     if (b.args) |args| {
         run_cmd.addArgs(args);
