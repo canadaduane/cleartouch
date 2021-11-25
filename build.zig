@@ -1,4 +1,5 @@
 const std = @import("std");
+const deps = @import("./deps.zig");
 
 const raylibFlags = &[_][]const u8{
     "-std=gnu99",
@@ -14,11 +15,9 @@ pub fn build(b: *std.build.Builder) void {
     // Sandbox
 
     const sandbox_exe = b.addExecutable("sandbox", "src/sandbox.zig");
-
     sandbox_exe.setTarget(target);
-
     sandbox_exe.setBuildMode(mode);
-
+    deps.addAllTo(sandbox_exe);
     sandbox_exe.install();
 
     const sandbox_cmd = sandbox_exe.run();
@@ -38,7 +37,6 @@ pub fn build(b: *std.build.Builder) void {
     main_exe.addLibPath("raylib/lib");
 
     main_exe.setTarget(target);
-
     main_exe.setBuildMode(mode);
 
     main_exe.linkLibC();
@@ -58,7 +56,9 @@ pub fn build(b: *std.build.Builder) void {
     main_exe.linkSystemLibrary("dl");
     main_exe.linkSystemLibrary("m");
     main_exe.linkSystemLibrary("X11");
+    main_exe.linkSystemLibrary("libudev");
 
+    deps.addAllTo(main_exe);
     main_exe.install();
 
     const run_cmd = main_exe.run();
