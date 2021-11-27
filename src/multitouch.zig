@@ -21,7 +21,7 @@ pub const InputEvent = extern struct {
             std.math.lossyCast(f64, input.time.tv_sec - _start_time) +
             std.math.lossyCast(f64, input.time.tv_usec) / 1e6;
         std.debug.print(
-            "  {s}(0x{X}, {d}) @ {d:.3}\n",
+            "  {s}(0x{X}, {d}) @ {d:.3}s\n",
             .{ name, input.code, input.value, time },
         );
     }
