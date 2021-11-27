@@ -6,7 +6,3 @@
 	path = lib/pike
 	url = https://github.com/lithdew/pike.git
 	shallow = true
-[submodule "zap"]
-	path = lib/zap
-	url = https://github.com/kprotty/zap.git
-	shallow = true
