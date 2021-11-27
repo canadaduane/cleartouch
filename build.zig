@@ -1,5 +1,4 @@
 const std = @import("std");
-const deps = @import("./deps.zig");
 
 const raylibFlags = &[_][]const u8{
     "-std=gnu99",
@@ -7,6 +6,29 @@ const raylibFlags = &[_][]const u8{
     "-DGL_SILENCE_DEPRECATION",
     "-fno-sanitize=undefined", // https://github.com/raysan5/raylib/issues/1891
 };
+
+fn addRayLib(exe: *std.build.LibExeObjStep) void {
+    exe.addIncludeDir("raylib/include");
+    exe.addLibPath("raylib/lib");
+    
+    exe.addIncludeDir("./lib/raylib/src");
+    exe.addIncludeDir("./lib/raylib/src/external/glfw/include");
+    
+    exe.addCSourceFile("./lib/raylib/src/rcore.c", raylibFlags);
+    exe.addCSourceFile("./lib/raylib/src/rmodels.c", raylibFlags);
+    exe.addCSourceFile("./lib/raylib/src/raudio.c", raylibFlags);
+    exe.addCSourceFile("./lib/raylib/src/rshapes.c", raylibFlags);
+    exe.addCSourceFile("./lib/raylib/src/rtext.c", raylibFlags);
+    exe.addCSourceFile("./lib/raylib/src/rtextures.c", raylibFlags);
+    exe.addCSourceFile("./lib/raylib/src/utils.c", raylibFlags);
+    exe.addCSourceFile("./lib/raylib/src/rglfw.c", raylibFlags);
+
+    exe.linkSystemLibrary("GL");
+    exe.linkSystemLibrary("rt");
+    exe.linkSystemLibrary("dl");
+    exe.linkSystemLibrary("m");
+    exe.linkSystemLibrary("X11");
+}
 
 pub fn build(b: *std.build.Builder) void {
     const target = b.standardTargetOptions(.{});
@@ -17,7 +39,12 @@ pub fn build(b: *std.build.Builder) void {
     const sandbox_exe = b.addExecutable("sandbox", "src/sandbox.zig");
     sandbox_exe.setTarget(target);
     sandbox_exe.setBuildMode(mode);
-    deps.addAllTo(sandbox_exe);
+
+    sandbox_exe.linkLibC();
+    sandbox_exe.linkSystemLibrary("libudev");
+
+    addRayLib(sandbox_exe);
+
     sandbox_exe.install();
 
     const sandbox_cmd = sandbox_exe.run();
@@ -33,32 +60,16 @@ pub fn build(b: *std.build.Builder) void {
 
     const main_exe = b.addExecutable("cleartouch", "src/main.zig");
 
-    main_exe.addIncludeDir("raylib/include");
-    main_exe.addLibPath("raylib/lib");
 
     main_exe.setTarget(target);
     main_exe.setBuildMode(mode);
 
     main_exe.linkLibC();
-    main_exe.addIncludeDir("./lib/raylib/src");
-    main_exe.addIncludeDir("./lib/raylib/src/external/glfw/include");
-    main_exe.addCSourceFile("./lib/raylib/src/rcore.c", raylibFlags);
-    main_exe.addCSourceFile("./lib/raylib/src/rmodels.c", raylibFlags);
-    main_exe.addCSourceFile("./lib/raylib/src/raudio.c", raylibFlags);
-    main_exe.addCSourceFile("./lib/raylib/src/rshapes.c", raylibFlags);
-    main_exe.addCSourceFile("./lib/raylib/src/rtext.c", raylibFlags);
-    main_exe.addCSourceFile("./lib/raylib/src/rtextures.c", raylibFlags);
-    main_exe.addCSourceFile("./lib/raylib/src/utils.c", raylibFlags);
-    main_exe.addCSourceFile("./lib/raylib/src/rglfw.c", raylibFlags);
-
-    main_exe.linkSystemLibrary("GL");
-    main_exe.linkSystemLibrary("rt");
-    main_exe.linkSystemLibrary("dl");
-    main_exe.linkSystemLibrary("m");
-    main_exe.linkSystemLibrary("X11");
     main_exe.linkSystemLibrary("libudev");
 
-    deps.addAllTo(main_exe);
+    addRayLib(main_exe);
+    main_exe.addPackagePath("pike", "lib/pike/pike.zig");
+
     main_exe.install();
 
     const run_cmd = main_exe.run();
@@ -69,5 +80,4 @@ pub fn build(b: *std.build.Builder) void {
 
     const run_step = b.step("run", "Run the app");
     run_step.dependOn(&run_cmd.step);
-
 }

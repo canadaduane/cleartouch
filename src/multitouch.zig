@@ -1,6 +1,8 @@
+const std = @import("std");
+
 const linux = @cImport({
-    @cInclude("input.h");
-    @cInclude("input-event-codes.h");
+    @cInclude("linux/input.h");
+    @cInclude("linux/input-event-codes.h");
 });
 
 const MultitouchTool = enum(c_uint) {
@@ -33,3 +35,23 @@ const MultitouchEvent = enum(c_uint) {
     count = linux.ABS_CNT,
 };
 
+var _start_time: i64 = -1;
+
+pub const InputEvent = extern struct {
+    time: linux.timeval,
+    type: u16,
+    code: u16,
+    value: i32,
+
+    pub fn format(
+        input: *const InputEvent,
+        writer: anytype,
+    ) !void {
+        if (_start_time < 0) _start_time = std.time.timestamp();
+        // use time relative to the start of the program
+        const time: f64 =
+            std.math.lossyCast(f64, input.time.tv_sec - _start_time) +
+            std.math.lossyCast(f64, input.time.tv_usec) / 1e6;
+        try std.fmt.format(writer, "{{EV({d}, {d}, {d}) ({d:.3})}}", .{ input.type, input.value, input.code, time });
+    }
+};
