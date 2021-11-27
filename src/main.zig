@@ -25,7 +25,7 @@ pub fn main() !void {
     defer notifier.deinit();
 
     const fd: os.fd_t = try udev.open_touchpad();
-    defer os.close(fd);
+    defer udev.close_touchpad(fd);
 
     // Initialize visual
     ray.InitWindow(
@@ -42,7 +42,7 @@ pub fn main() !void {
     var iter: u64 = 0;
     while (true) : (iter += 1) {
         try notifier.poll(10);
-        std.debug.print("loop {}\n", .{iter});
+        // std.debug.print("loop {}\n", .{iter});
 
         if (ray.WindowShouldClose()) break;
 
