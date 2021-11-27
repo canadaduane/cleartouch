@@ -1,42 +1,11 @@
 const std = @import("std");
 
-const MAX_TOUCH_POINTS = 10;
-
 const linux = @cImport({
     @cInclude("linux/input.h");
     @cInclude("linux/input-event-codes.h");
 });
 
-const MultitouchTool = enum(c_uint) {
-    finger = linux.MT_TOOL_FINGER,
-    pen = linux.MT_TOOL_PEN,
-    palm = linux.MT_TOOL_PALM,
-    dial = linux.MT_TOOL_DIAL,
-    max = linux.MT_TOOL_MAX,
-};
-
-const MultitouchEvent = enum(c_uint) {
-    reserved = linux.ABS_RESERVED,
-    slot = linux.ABS_MT_SLOT, // MT slot being modified
-    touch_major = linux.ABS_MT_TOUCH_MAJOR, // Major axis of touching ellipse
-    touch_minor = linux.ABS_MT_TOUCH_MINOR, // Minor axis (omit if circular)
-    width_major = linux.ABS_MT_WIDTH_MAJOR, // Major axis of approaching ellipse
-    width_minor = linux.ABS_MT_WIDTH_MINOR, // Minor axis (omit if circular)
-    orientation = linux.ABS_MT_ORIENTATION, // Ellipse orientation
-    position_x = linux.ABS_MT_POSITION_X, // Center X touch position
-    position_y = linux.ABS_MT_POSITION_Y, // Center Y touch position
-    tool_type = linux.ABS_MT_TOOL_TYPE, // Type of touching device
-    blob_id = linux.ABS_MT_BLOB_ID, // Group a set of packets as a blob
-    tracking_id = linux.ABS_MT_TRACKING_ID, // Unique ID of initiated contact
-    pressure = linux.ABS_MT_PRESSURE, // Pressure on contact area
-    distance = linux.ABS_MT_DISTANCE, // Contact hover distance
-    tool_x = linux.ABS_MT_TOOL_X, // Center X tool position
-    tool_y = linux.ABS_MT_TOOL_Y, // Center Y tool position
-
-    max = linux.ABS_MAX,
-    count = linux.ABS_CNT,
-};
-
+const MAX_TOUCH_POINTS = 10;
 var _start_time: i64 = -1;
 
 pub const InputEvent = extern struct {
@@ -45,41 +14,27 @@ pub const InputEvent = extern struct {
     code: u16,
     value: i32,
 
-    pub fn format(
-        input: *const InputEvent,
-        writer: anytype,
-    ) !void {
+    fn print_evt(input: *const InputEvent, name: []const u8) void {
         if (_start_time < 0) _start_time = std.time.timestamp();
         // use time relative to the start of the program
         const time: f64 =
             std.math.lossyCast(f64, input.time.tv_sec - _start_time) +
             std.math.lossyCast(f64, input.time.tv_usec) / 1e6;
+        std.debug.print(
+            "  {s}(0x{X}, {d}) @ {d:.3}\n",
+            .{ name, input.code, input.value, time },
+        );
+    }
 
+    pub fn print(input: *const InputEvent) void {
         switch (input.type) {
-            linux.EV_KEY => try std.fmt.format(
-                writer,
-                "  EV_KEY(0x{X}, {d}) ({d:.3})\n",
-                .{ input.code, input.value, time },
-            ),
-            linux.EV_ABS => try std.fmt.format(
-                writer,
-                "  EV_ABS(0x{X}, {d}) ({d:.3})\n",
-                .{ input.code, input.value, time },
-            ),
-            linux.EV_MSC => try std.fmt.format(
-                writer,
-                "  EV_MSC(0x{X}, {d}) ({d:.3})\n",
-                .{ input.code, input.value, time },
-            ),
-            linux.EV_SYN => try std.fmt.format(
-                writer,
-                "  EV_SYN() ({d:.3})\n",
-                .{time},
-            ),
-            else => try std.fmt.format(
-                writer,
-                "  EV(0x{X}, 0x{X}, {d}) ({d:.3})\n",
-                .{ input.type, input.code, input.value, time },
+            linux.EV_KEY => input.print_evt("EV_KEY"),
+            linux.EV_ABS => input.print_evt("EV_ABS"),
+            linux.EV_MSC => input.print_evt("EV_MSC"),
+            linux.EV_SYN => input.print_evt("EV_SYN"),
+            else => std.debug.print(
+                "  EV(0x{X}, 0x{X}, {d})\n",
+                .{ input.type, input.code, input.value },
             ),
         }
     }
@@ -189,8 +144,14 @@ pub const MTStateMachine = struct {
                     },
                     linux.ABS_MT_TOUCH_MAJOR => touch.touch_major = input.value,
                     linux.ABS_MT_TOUCH_MINOR => touch.touch_minor = input.value,
-                    linux.ABS_MT_POSITION_X => touch.position_x = input.value,
-                    linux.ABS_MT_POSITION_Y => touch.position_y = input.value,
+                    linux.ABS_MT_POSITION_X => {
+                        touch.used = true;
+                        touch.position_x = input.value;
+                    },
+                    linux.ABS_MT_POSITION_Y => {
+                        touch.used = true;
+                        touch.position_y = input.value;
+                    },
                     else => {},
                 }
             },

@@ -39,9 +39,8 @@ pub fn open_touchpad() !os.fd_t {
 
     while (entry) |node| : (entry = linux.udev_list_entry_get_next(node)) {
         const name = mem.sliceTo(linux.udev_list_entry_get_name(node), 0);
-        // std.log.debug("{s}", .{name});
         if (mem.indexOf(u8, name, "/event") != null) {
-            std.log.debug("found device: {s}", .{name});
+            // std.debug.print("Found touchpad: {s}\n", .{name});
 
             const dev = linux.udev_device_new_from_syspath(
                 context,
@@ -51,7 +50,7 @@ pub fn open_touchpad() !os.fd_t {
             defer _ = linux.udev_device_unref(dev);
 
             const devnode = mem.sliceTo(linux.udev_device_get_devnode(dev), 0);
-            std.log.debug("devnode: {s}", .{devnode});
+            std.debug.print("Found touchpad: {s}\n", .{devnode});
 
             const fd = try os.open(devnode, os.O.RDONLY | os.O.NONBLOCK, 0);
 
@@ -72,3 +71,4 @@ pub fn close_touchpad(fd: os.fd_t) void {
     }
     os.close(fd);
 }
+

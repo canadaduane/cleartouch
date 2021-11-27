@@ -24,7 +24,10 @@ pub fn main() !void {
     const notifier = try pike.Notifier.init();
     defer notifier.deinit();
 
-    const fd: os.fd_t = try udev.open_touchpad();
+    const fd: os.fd_t = udev.open_touchpad() catch |err| {
+        std.debug.print("Unable to open touchpad: {s}\n", .{err});
+        std.os.exit(1);
+    };
     defer udev.close_touchpad(fd);
 
     // Initialize visual
@@ -53,6 +56,8 @@ pub fn main() !void {
             ray.ClearBackground(ray.RAYWHITE);
 
             for (machine.touches) |touch, i| {
+                if (!touch.used) continue;
+
                 const pos: ray.Vector2 = ray.Vector2{
                     .x = @intToFloat(f32, touch.position_x),
                     .y = @intToFloat(f32, touch.position_y),
@@ -68,43 +73,11 @@ pub fn main() !void {
             }
         }
     }
-
-    // while (!ray.WindowShouldClose()) {
-    //     ray.BeginDrawing();
-    //     defer ray.EndDrawing();
-
-    //     {
-    //         var i: u64 = 0;
-    //         while (i < MAX_TOUCH_POINTS) : (i += 1) {
-    //             touchPositions[i] = ray.GetTouchPosition(@intCast(c_int, i));
-    //         }
-    //     }
-
-    //     ray.ClearBackground(ray.RAYWHITE);
-
-    //     {
-    //         var i: c_uint = 0;
-    //         while (i < MAX_TOUCH_POINTS) : (i += 1) {
-    //             if ((touchPositions[i].x > 0) and (touchPositions[i].y > 0)) {
-    //                 ray.DrawCircleV(touchPositions[i], 34, ORANGE);
-    //                 ray.DrawText(
-    //                     ray.TextFormat("%d", i),
-    //                     @floatToInt(c_int, touchPositions[i].x - 10),
-    //                     @floatToInt(c_int, touchPositions[i].y - 70),
-    //                     40,
-    //                     ray.BLACK,
-    //                 );
-    //             }
-    //         }
-    //     }
 }
 
 fn wake(handle: *pike.Handle, batch: *pike.Batch, opts: pike.WakeOptions) void {
-    const stdout = std.io.getStdOut().writer();
-    // var events: [100]mt.InputEvent = std.mem.zeroes([100]mt.InputEvent);
     var events: [100]mt.InputEvent = undefined;
     if (opts.read_ready) {
-        // const bytes = os.read(handle.inner, @ptrCast([*]u8, &events));
         const bytes = os.read(handle.inner, std.mem.sliceAsBytes(events[0..])) catch 0;
         if (bytes == 0) {
             std.debug.print("read 0 bytes\n", .{});
@@ -116,12 +89,11 @@ fn wake(handle: *pike.Handle, batch: *pike.Batch, opts: pike.WakeOptions) void {
         std.debug.print("fd: {d}, {d}\n", .{ handle.inner, bytes });
 
         for (events[0..eventCount]) |event| {
-            event.format(stdout) catch std.debug.print("uhoh\n", .{});
+            event.print();
             machine.process(&event) catch |err| {
                 std.debug.print("can't process: {}\n", .{err});
             };
         }
-        // std.debug.print("{s}", .{events});
     }
     _ = batch;
 }
