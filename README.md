@@ -8,7 +8,7 @@ Cleartouch grabs your `/dev/input*` data stream and interprets the kernel multit
 
 ## Installation
 
-With the zig compiler installed:
+With the [zig](https://ziglang.org/download/) compiler installed:
 
 ```
 git clone https://github.com/canadaduane/cleartouch.git --recursive

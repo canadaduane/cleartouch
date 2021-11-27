@@ -61,6 +61,11 @@ const TouchData = struct {
     tool_y: i32,
     tool_type: i32,
 
+    fn set(self: *TouchData, comptime field: []const u8, value: i32) void {
+        self.used = true;
+        @field(self, field) = value;
+    }
+
     pub fn reset(self: *TouchData) void {
         self.used = false;
 
@@ -107,12 +112,8 @@ pub const MTStateMachine = struct {
 
         for (self.touches) |_, i| {
             self.touches[i].used = false;
-            // touch.used = false;
         }
     }
-
-    // fn set_slot(comptime field, slot: i32, value: i32) !void {
-    // }
 
     pub fn process(self: *MTStateMachine, input: *const InputEvent) !void {
         switch (input.type) {
@@ -142,16 +143,21 @@ pub const MTStateMachine = struct {
                             touch.tracking_id = input.value;
                         }
                     },
-                    linux.ABS_MT_TOUCH_MAJOR => touch.touch_major = input.value,
-                    linux.ABS_MT_TOUCH_MINOR => touch.touch_minor = input.value,
-                    linux.ABS_MT_POSITION_X => {
-                        touch.used = true;
-                        touch.position_x = input.value;
-                    },
-                    linux.ABS_MT_POSITION_Y => {
-                        touch.used = true;
-                        touch.position_y = input.value;
-                    },
+                    linux.ABS_MT_POSITION_X => touch.set("position_x", input.value),
+                    linux.ABS_MT_POSITION_Y => touch.set("position_y", input.value),
+
+                    linux.ABS_MT_PRESSURE => touch.set("pressure", input.value),
+                    linux.ABS_MT_DISTANCE => touch.set("distance", input.value),
+
+                    linux.ABS_MT_TOUCH_MAJOR => touch.set("touch_major", input.value),
+                    linux.ABS_MT_TOUCH_MINOR => touch.set("touch_minor", input.value),
+                    linux.ABS_MT_WIDTH_MAJOR => touch.set("width_major", input.value),
+                    linux.ABS_MT_WIDTH_MINOR => touch.set("width_minor", input.value),
+                    linux.ABS_MT_ORIENTATION => touch.set("orientation", input.value),
+
+                    linux.ABS_MT_TOOL_X => touch.set("tool_x", input.value),
+                    linux.ABS_MT_TOOL_Y => touch.set("tool_y", input.value),
+                    linux.ABS_MT_TOOL_TYPE => touch.set("tool_type", input.value),
                     else => {},
                 }
             },

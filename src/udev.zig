@@ -54,21 +54,25 @@ pub fn open_touchpad() !os.fd_t {
 
             const fd = try os.open(devnode, os.O.RDONLY | os.O.NONBLOCK, 0);
 
-            if (std.os.linux.ioctl(fd, linux.EVIOCGRAB, GRAB) < 0) {
-                return DeviceError.CantGrab;
-            }
-
             return fd;
         }
     }
     return DeviceError.NotFound;
 }
 
-pub fn close_touchpad(fd: os.fd_t) void {
-    const success = std.os.linux.ioctl(fd, linux.EVIOCGRAB, UNGRAB);
-    if (success < 0) {
-        std.debug.print("Can't ungrab device");
+pub fn grab(fd: os.fd_t) !void {
+    if (std.os.linux.ioctl(fd, linux.EVIOCGRAB, GRAB) < 0) {
+        return DeviceError.CantGrab;
     }
-    os.close(fd);
 }
 
+pub fn ungrab(fd: os.fd_t) !void {
+    if (std.os.linux.ioctl(fd, linux.EVIOCGRAB, UNGRAB) < 0) {
+        return DeviceError.CantGrab;
+    }
+}
+
+pub fn close_touchpad(fd: os.fd_t) void {
+    ungrab(fd) catch {};
+    os.close(fd);
+}

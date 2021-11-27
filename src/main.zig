@@ -1,15 +1,13 @@
 const std = @import("std");
 const os = std.os;
-const mt = @import("multitouch.zig");
-const udev = @import("udev.zig");
 const pike = @import("pike");
 
-const ray = @cImport({
-    @cInclude("raylib.h");
-});
+const mt = @import("multitouch.zig");
+const udev = @import("udev.zig");
+const ray = @import("ray.zig");
 
-const ORANGE =
-    ray.Color{ .r = 255, .g = 161, .b = 0, .a = 255 };
+const ORANGE = ray.Color{ .r = 255, .g = 161, .b = 0, .a = 255 };
+const YELLOW = ray.Color{ .r = 245, .g = 235, .b = 0, .a = 255 };
 const SCREEN_WIDTH = 1200;
 const SCREEN_HEIGHT = 800;
 
@@ -43,17 +41,28 @@ pub fn main() !void {
     try notifier.register(&handle, .{ .read = true, .write = false });
 
     var iter: u64 = 0;
+    var grabbed: bool = false;
     while (true) : (iter += 1) {
         try notifier.poll(10);
         // std.debug.print("loop {}\n", .{iter});
 
-        if (ray.WindowShouldClose()) break;
+        if (ray.IsKeyPressed(ray.KEY_ENTER) and !grabbed) {
+            try udev.grab(fd);
+            grabbed = true;
+            ray.SetExitKey(0);
+        } else if (ray.IsKeyPressed(ray.KEY_ESCAPE) and grabbed) {
+            try udev.ungrab(fd);
+            grabbed = false;
+            ray.SetExitKey(ray.KEY_ESCAPE);
+        } else if (ray.WindowShouldClose()) {
+            break;
+        }
 
         {
             ray.BeginDrawing();
             defer ray.EndDrawing();
 
-            ray.ClearBackground(ray.RAYWHITE);
+            ray.ClearBackground(ray.WHITE);
 
             for (machine.touches) |touch, i| {
                 if (!touch.used) continue;
@@ -62,13 +71,31 @@ pub fn main() !void {
                     .x = @intToFloat(f32, touch.position_x),
                     .y = @intToFloat(f32, touch.position_y),
                 };
-                ray.DrawCircleV(pos, 34, ORANGE);
+                ray.DrawCircleV(pos, 34, if (i == 0) YELLOW else ORANGE);
                 ray.DrawText(
                     ray.TextFormat("%d", i),
                     @floatToInt(c_int, pos.x - 10),
                     @floatToInt(c_int, pos.y - 70),
                     40,
                     ray.BLACK,
+                );
+            }
+
+            if (grabbed) {
+                ray.DrawTextCentered(
+                    "Press ESC to restore focus",
+                    @divFloor(SCREEN_WIDTH, 2),
+                    @divFloor(SCREEN_HEIGHT, 2),
+                    30,
+                    ray.GRAY,
+                );
+            } else {
+                ray.DrawTextCentered(
+                    "Press ENTER to grab touchpad",
+                    @divFloor(SCREEN_WIDTH, 2),
+                    @divFloor(SCREEN_HEIGHT, 2),
+                    30,
+                    ray.GRAY,
                 );
             }
         }
