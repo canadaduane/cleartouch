@@ -6,9 +6,12 @@ pub const InitWindow = ray.InitWindow;
 pub const SetTargetFPS = ray.SetTargetFPS;
 pub const WindowShouldClose = ray.WindowShouldClose;
 pub const CloseWindow = ray.CloseWindow;
+pub const IsWindowFocused = ray.IsWindowFocused;
+
 pub const BeginDrawing = ray.BeginDrawing;
 pub const EndDrawing = ray.EndDrawing;
 pub const DrawCircleV = ray.DrawCircleV;
+pub const DrawRing = ray.DrawRing;
 pub const DrawText = ray.DrawText;
 pub const ClearBackground = ray.ClearBackground;
 pub const TextFormat = ray.TextFormat;

@@ -75,6 +75,9 @@ pub fn main() !void {
                     .y = @intToFloat(f32, touch.position_y) / SCALE,
                 };
                 ray.DrawCircleV(pos, 34, if (i == 0) YELLOW else ORANGE);
+                if (touch.pressed_double) {
+                    ray.DrawRing(pos, 14, 20, 0, 360, 64, ray.BLACK);
+                }
                 if (touch.pressed) {
                     ray.DrawCircleV(pos, 8, ray.BLACK);
                 }
@@ -87,22 +90,24 @@ pub fn main() !void {
                 );
             }
 
-            if (grabbed) {
-                ray.DrawTextCentered(
-                    "Press ESC to restore focus",
-                    @floatToInt(c_int, SCREEN_WIDTH / 2),
-                    @floatToInt(c_int, SCREEN_HEIGHT / 2),
-                    30,
-                    ray.GRAY,
-                );
-            } else {
-                ray.DrawTextCentered(
-                    "Press ENTER to grab touchpad",
-                    @floatToInt(u32, SCREEN_WIDTH / 2),
-                    @floatToInt(u32, SCREEN_HEIGHT / 2),
-                    30,
-                    ray.GRAY,
-                );
+            if (ray.IsWindowFocused()) {
+                if (grabbed) {
+                    ray.DrawTextCentered(
+                        "Press ESC to restore focus",
+                        @floatToInt(c_int, SCREEN_WIDTH / 2),
+                        @floatToInt(c_int, SCREEN_HEIGHT / 2),
+                        30,
+                        ray.GRAY,
+                    );
+                } else {
+                    ray.DrawTextCentered(
+                        "Press ENTER to grab touchpad",
+                        @floatToInt(u32, SCREEN_WIDTH / 2),
+                        @floatToInt(u32, SCREEN_HEIGHT / 2),
+                        30,
+                        ray.GRAY,
+                    );
+                }
             }
         }
     }

@@ -5,6 +5,35 @@ const linux = @cImport({
     @cInclude("linux/input-event-codes.h");
 });
 
+fn code_lookup(code: u16) ?[]const u8 {
+    return switch (code) {
+        0x00 => "X", // ABS_X
+        0x01 => "Y", // ABS_Y
+
+        0x2f => "SLOT", // MT slot being modified
+        0x30 => "TOUCH_MAJOR", // Major axis of touching ellipse
+        0x31 => "TOUCH_MINOR", // Minor axis (omit if circular)
+        0x32 => "WIDTH_MAJOR", // Major axis of approaching ellipse
+        0x33 => "WIDTH_MINOR", // Minor axis (omit if circular)
+        0x34 => "ORIENTATION", // Ellipse orientation
+        0x35 => "POSITION_X", // Center X touch position
+        0x36 => "POSITION_Y", // Center Y touch position
+        0x37 => "TOOL_TYPE", // Type of touching device
+        0x38 => "BLOB_ID", // Group a set of packets as a blob
+        0x39 => "TRACKING_ID", // Unique ID of initiated contact
+        0x3a => "PRESSURE", // Pressure on contact area
+        0x3b => "DISTANCE", // Contact hover distance
+        0x3c => "TOOL_X", // Center X tool position
+        0x3d => "TOOL_Y", // Center Y tool position
+
+        0x145 => "BTN_TOOL_FINGER",
+        0x14a => "BTN_TOUCH",
+        0x14d => "BTN_TOOL_DOUBLETAP",
+
+        else => null,
+    };
+}
+
 const MAX_TOUCH_POINTS = 10;
 var _start_time: i64 = -1;
 
@@ -15,6 +44,20 @@ pub const InputEvent = extern struct {
     value: i32,
 
     fn print_evt(input: *const InputEvent, name: []const u8) void {
+        if (code_lookup(input.code)) |code_name| {
+            std.debug.print(
+                "  {s}({s}, {d})\n",
+                .{ name, code_name, input.value },
+            );
+        } else {
+            std.debug.print(
+                "  {s}(0x{X}, {d})\n",
+                .{ name, input.code, input.value },
+            );
+        }
+    }
+
+    fn print_timed_evt(input: *const InputEvent, name: []const u8) void {
         if (_start_time < 0) _start_time = std.time.timestamp();
         // use time relative to the start of the program
         const time: f64 =
@@ -43,6 +86,7 @@ pub const InputEvent = extern struct {
 const TouchData = struct {
     used: bool = false,
     pressed: bool = false,
+    pressed_double: bool = false,
 
     tracking_id: i32 = -1,
 
@@ -70,6 +114,7 @@ const TouchData = struct {
     pub fn reset(self: *TouchData) void {
         self.used = false;
         self.pressed = false;
+        self.pressed_double = false;
 
         self.tracking_id = -1;
 
@@ -121,8 +166,11 @@ pub const MTStateMachine = struct {
         switch (input.type) {
             linux.EV_KEY => {
                 switch (input.code) {
-                    linux.BTN_TOUCH, linux.BTN_TOOL_FINGER => {
+                    linux.BTN_TOUCH => {
                         self.touches[0].pressed = (input.value == 1);
+                    },
+                    linux.BTN_TOOL_DOUBLETAP => {
+                        self.touches[0].pressed_double = (input.value == 1);
                     },
                     else => {},
                 }
