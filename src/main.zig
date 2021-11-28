@@ -36,7 +36,10 @@ pub fn main() !void {
     defer udev.close_touchpad(fd);
 
     // Initialize visual
-    ray.SetConfigFlags(ray.FLAG_WINDOW_RESIZABLE | ray.FLAG_VSYNC_HINT);
+    ray.SetConfigFlags( //
+        ray.FLAG_WINDOW_RESIZABLE |
+        ray.FLAG_VSYNC_HINT |
+        ray.FLAG_WINDOW_TOPMOST);
     ray.InitWindow(
         @floatToInt(c_int, dims.screen_width),
         @floatToInt(c_int, dims.screen_height),
@@ -100,29 +103,45 @@ pub fn main() !void {
                 pos.x = corner.x + pos.x * scale;
                 pos.y = corner.y + pos.y * scale;
 
-                ray.DrawCircleV(pos, 34, if (i == 0) YELLOW else ORANGE);
+                const cscale = std.math.clamp(scale, 0.5, 2);
+
+                ray.DrawCircleV(
+                    pos,
+                    34 * cscale,
+                    if (i == 0) YELLOW else ORANGE,
+                );
                 if (touch.pressed_double) {
-                    ray.DrawRing(pos, 14, 20, 0, 360, 64, ray.BLACK);
+                    ray.DrawRing(
+                        pos,
+                        14 * cscale, // inner radius
+                        20 * cscale, // outer radius
+                        0, // arc begin
+                        360, // arc end
+                        64, // line segments
+                        ray.BLACK,
+                    );
                 }
                 if (touch.pressed) {
-                    ray.DrawCircleV(pos, 8, ray.BLACK);
+                    ray.DrawCircleV(pos, 8 * cscale, ray.BLACK);
                 }
                 ray.DrawText(
                     ray.TextFormat("%d", i),
-                    @floatToInt(c_int, pos.x - 10),
-                    @floatToInt(c_int, pos.y - 70),
-                    40,
+                    @floatToInt(c_int, pos.x - 10 * cscale),
+                    @floatToInt(c_int, pos.y - 70 * cscale),
+                    @floatToInt(c_int, 40.0 * cscale),
                     ray.BLACK,
                 );
             }
 
             if (ray.IsWindowFocused()) {
+                const width = @intToFloat(f32, ray.MeasureText("Press ENTER to grab touchpad", 30));
+                const font_size: i32 = if (width + dims.margin * 2 > dims.touchpad_max_extent_x * scale) 10 else 30;
                 if (grabbed) {
                     ray.DrawTextCentered(
                         "Press ESC to restore focus",
                         @floatToInt(c_int, dims.screen_width / 2),
                         @floatToInt(c_int, dims.screen_height / 2),
-                        30,
+                        font_size,
                         ray.GRAY,
                     );
                 } else {
@@ -130,7 +149,7 @@ pub fn main() !void {
                         "Press ENTER to grab touchpad",
                         @floatToInt(c_int, dims.screen_width / 2),
                         @floatToInt(c_int, dims.screen_height / 2),
-                        30,
+                        font_size,
                         ray.GRAY,
                     );
                 }
@@ -168,3 +187,4 @@ fn getPosFromTouch(touch: *const mt.TouchData) ray.Vector2 {
         .y = @intToFloat(f32, touch.position_y),
     };
 }
+

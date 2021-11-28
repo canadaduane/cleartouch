@@ -17,12 +17,15 @@ pub const Dimensions = struct {
     }
 
     pub fn getTouchpadScale(self: *Dimensions) f32 {
-        if (self.touchpad_max_extent_x > self.touchpad_max_extent_y) {
-            return self.screen_width /
-                (self.touchpad_max_extent_x + self.margin * 2);
-        } else {
+        const ratio_screen = self.screen_width / self.screen_height;
+        const ratio_touchpad = self.touchpad_max_extent_x / self.touchpad_max_extent_y;
+
+        if (ratio_screen > ratio_touchpad) {
             return self.screen_height /
                 (self.touchpad_max_extent_y + self.margin * 2);
+        } else {
+            return self.screen_width /
+                (self.touchpad_max_extent_x + self.margin * 2);
         }
     }
 
@@ -33,4 +36,3 @@ pub const Dimensions = struct {
             self.touchpad_max_extent_y = y;
     }
 };
-
