@@ -8,8 +8,11 @@ const ray = @import("ray.zig");
 
 const ORANGE = ray.Color{ .r = 255, .g = 161, .b = 0, .a = 255 };
 const YELLOW = ray.Color{ .r = 245, .g = 235, .b = 0, .a = 255 };
-const SCREEN_WIDTH = 1200;
-const SCREEN_HEIGHT = 800;
+const TOUCHPAD_MAX_EXTENT_X = 1345.0;
+const TOUCHPAD_MAX_EXTENT_Y = 865.0;
+const SCALE = 2.0;
+const SCREEN_WIDTH: f32 = TOUCHPAD_MAX_EXTENT_X / SCALE;
+const SCREEN_HEIGHT: f32 = TOUCHPAD_MAX_EXTENT_Y / SCALE;
 
 const log = std.log;
 
@@ -30,8 +33,8 @@ pub fn main() !void {
 
     // Initialize visual
     ray.InitWindow(
-        SCREEN_WIDTH,
-        SCREEN_HEIGHT,
+        @floatToInt(u32, SCREEN_WIDTH),
+        @floatToInt(u32, SCREEN_HEIGHT),
         "Cleartouch - Touchpad Visualizer",
     );
     defer ray.CloseWindow();
@@ -68,10 +71,13 @@ pub fn main() !void {
                 if (!touch.used) continue;
 
                 const pos: ray.Vector2 = ray.Vector2{
-                    .x = @intToFloat(f32, touch.position_x),
-                    .y = @intToFloat(f32, touch.position_y),
+                    .x = @intToFloat(f32, touch.position_x) / SCALE,
+                    .y = @intToFloat(f32, touch.position_y) / SCALE,
                 };
                 ray.DrawCircleV(pos, 34, if (i == 0) YELLOW else ORANGE);
+                if (touch.pressed) {
+                    ray.DrawCircleV(pos, 8, ray.BLACK);
+                }
                 ray.DrawText(
                     ray.TextFormat("%d", i),
                     @floatToInt(c_int, pos.x - 10),
@@ -84,16 +90,16 @@ pub fn main() !void {
             if (grabbed) {
                 ray.DrawTextCentered(
                     "Press ESC to restore focus",
-                    @divFloor(SCREEN_WIDTH, 2),
-                    @divFloor(SCREEN_HEIGHT, 2),
+                    @floatToInt(c_int, SCREEN_WIDTH / 2),
+                    @floatToInt(c_int, SCREEN_HEIGHT / 2),
                     30,
                     ray.GRAY,
                 );
             } else {
                 ray.DrawTextCentered(
                     "Press ENTER to grab touchpad",
-                    @divFloor(SCREEN_WIDTH, 2),
-                    @divFloor(SCREEN_HEIGHT, 2),
+                    @floatToInt(u32, SCREEN_WIDTH / 2),
+                    @floatToInt(u32, SCREEN_HEIGHT / 2),
                     30,
                     ray.GRAY,
                 );

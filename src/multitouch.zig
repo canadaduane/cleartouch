@@ -42,6 +42,7 @@ pub const InputEvent = extern struct {
 
 const TouchData = struct {
     used: bool = false,
+    pressed: bool = false,
 
     tracking_id: i32 = -1,
 
@@ -61,13 +62,14 @@ const TouchData = struct {
     tool_y: i32,
     tool_type: i32,
 
-    fn set(self: *TouchData, comptime field: []const u8, value: i32) void {
+    fn set(self: *TouchData, comptime field: []const u8, value: anytype) void {
         self.used = true;
         @field(self, field) = value;
     }
 
     pub fn reset(self: *TouchData) void {
         self.used = false;
+        self.pressed = false;
 
         self.tracking_id = -1;
 
@@ -117,7 +119,14 @@ pub const MTStateMachine = struct {
 
     pub fn process(self: *MTStateMachine, input: *const InputEvent) !void {
         switch (input.type) {
-            linux.EV_KEY => {},
+            linux.EV_KEY => {
+                switch (input.code) {
+                    linux.BTN_TOUCH, linux.BTN_TOOL_FINGER => {
+                        self.touches[0].pressed = (input.value == 1);
+                    },
+                    else => {},
+                }
+            },
             linux.EV_ABS => {
                 switch (self.state) {
                     MTState.loading => {},
