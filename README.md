@@ -22,3 +22,8 @@ Then run as root so you can grab the touchpad and read its input:
 sudo ./cleartouch
 ```
 
+## Hacking Docs
+
+- [Linux Event Codes](https://github.com/torvalds/linux/blob/master/include/uapi/linux/input-event-codes.h)
+- [Raylib Cheatsheet](https://www.raylib.com/cheatsheet/cheatsheet.html)
+- [Pike](https://github.com/lithdew/pike)
