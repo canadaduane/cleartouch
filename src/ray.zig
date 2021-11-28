@@ -2,30 +2,7 @@ pub const ray = @cImport({
     @cInclude("raylib.h");
 });
 
-pub const InitWindow = ray.InitWindow;
-pub const SetTargetFPS = ray.SetTargetFPS;
-pub const WindowShouldClose = ray.WindowShouldClose;
-pub const CloseWindow = ray.CloseWindow;
-pub const IsWindowFocused = ray.IsWindowFocused;
-
-pub const BeginDrawing = ray.BeginDrawing;
-pub const EndDrawing = ray.EndDrawing;
-pub const DrawCircleV = ray.DrawCircleV;
-pub const DrawRing = ray.DrawRing;
-pub const DrawText = ray.DrawText;
-pub const ClearBackground = ray.ClearBackground;
-pub const TextFormat = ray.TextFormat;
-pub const Vector2 = ray.Vector2;
-
-pub const Color = ray.Color;
-pub const WHITE = ray.WHITE;
-pub const GRAY = ray.GRAY;
-pub const BLACK = ray.BLACK;
-
-pub const IsKeyPressed = ray.IsKeyPressed;
-pub const SetExitKey = ray.SetExitKey;
-pub const KEY_ENTER = ray.KEY_ENTER;
-pub const KEY_ESCAPE = ray.KEY_ESCAPE;
+pub usingnamespace ray;
 
 pub fn DrawTextCentered(
     message: [*c]const u8,

@@ -83,7 +83,7 @@ pub const InputEvent = extern struct {
     }
 };
 
-const TouchData = struct {
+pub const TouchData = struct {
     used: bool = false,
     pressed: bool = false,
     pressed_double: bool = false,
