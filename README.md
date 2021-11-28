@@ -2,9 +2,9 @@
 
 A graphical visualization of your Linux touchpad device's input.
 
-Cleartouch grabs your `/dev/input*` data stream and interprets the kernel multitouch events so they can be represented visually on a 2d canvas (via raylib).
+Cleartouch grabs your `/dev/input/event*` data stream and interprets the kernel multitouch events so they can be represented visually on a 2d canvas (via raylib).
 
-<img src="https://github.com/canadaduane/cleartouch/raw/main/screenshot.png" width="600" height="400">
+![screenshot](https://github.com/canadaduane/cleartouch/raw/main/screenshot.png)
 
 ## Installation
 
