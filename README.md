@@ -6,6 +6,8 @@ Cleartouch grabs your `/dev/input/event*` data stream and interprets the kernel 
 
 ![screenshot](https://github.com/canadaduane/cleartouch/raw/main/screenshot.png)
 
+YouTube Demo: https://youtu.be/Cpn_lILPhEM
+
 ## Installation
 
 With the [zig](https://ziglang.org/download/) compiler installed:
