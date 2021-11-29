@@ -69,6 +69,7 @@ pub fn build(b: *std.build.Builder) void {
 
     addRayLib(main_exe);
     main_exe.addPackagePath("pike", "lib/pike/pike.zig");
+    main_exe.addPackagePath("clap", "lib/clap/clap.zig");
 
     main_exe.install();
 

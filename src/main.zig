@@ -1,10 +1,10 @@
 const std = @import("std");
-const os = std.os;
 const pike = @import("pike");
+const clap = @import("clap");
 
-const mt = @import("multitouch.zig");
-const udev = @import("udev.zig");
 const ray = @import("ray.zig");
+const udev = @import("udev.zig");
+const mt = @import("multitouch.zig");
 const dim = @import("dimensions.zig");
 
 const MAGENTA = ray.Color{ .r = 255, .g = 0, .b = 182, .a = 255 };
@@ -12,11 +12,11 @@ const TEAL = ray.Color{ .r = 0, .g = 213, .b = 255, .a = 255 };
 const ORANGE = ray.Color{ .r = 255, .g = 101, .b = 0, .a = 255 };
 const YELLOW = ray.Color{ .r = 245, .g = 215, .b = 0, .a = 255 };
 
-const HISTORY_LEN = 20;
+const HISTORY_MAX = 20;
 
 var machine = mt.MTStateMachine{};
-var touch_history: [HISTORY_LEN][mt.MAX_TOUCH_POINTS]mt.TouchData =
-    [1][mt.MAX_TOUCH_POINTS]mt.TouchData{[1]mt.TouchData{std.mem.zeroes(mt.TouchData)} ** mt.MAX_TOUCH_POINTS} ** HISTORY_LEN;
+var touch_history: [HISTORY_MAX][mt.MAX_TOUCH_POINTS]mt.TouchData =
+    [1][mt.MAX_TOUCH_POINTS]mt.TouchData{[1]mt.TouchData{std.mem.zeroes(mt.TouchData)} ** mt.MAX_TOUCH_POINTS} ** HISTORY_MAX;
 
 var dims = dim.Dimensions{
     .screen_width = 672,
@@ -28,33 +28,65 @@ var dims = dim.Dimensions{
     .margin = 15,
 };
 
+const Opts = struct {
+    trails: u32,
+    top_window: bool,
+    verbose: bool,
+};
+
+var opts = Opts{
+    .trails = 20,
+    .top_window = true,
+    .verbose = false,
+};
+
 pub fn main() !void {
+    const params = comptime [_]clap.Param(clap.Help){
+        clap.parseParam("-h, --help              Display this help and exit.") catch unreachable,
+        clap.parseParam("-t, --trails <NUM>      Show trails per touch point (default: 20)") catch unreachable,
+        clap.parseParam("-w, --top-window <t|f>  Set topmost window flag (default: t)") catch unreachable,
+        clap.parseParam("-v, --verbose           Show all kernel multitouch events") catch unreachable,
+    };
+
+    var diag = clap.Diagnostic{};
+    var args = clap.parse(clap.Help, &params, .{ .diagnostic = &diag }) catch |err| {
+        diag.report(std.io.getStdErr().writer(), err) catch {};
+        return err;
+    };
+    defer args.deinit();
+
+    if (args.flag("--help")) {
+        try clap.help(std.io.getStdErr().writer(), &params);
+        std.os.exit(1);
+    }
+    if (args.option("--trails")) |n| {
+        opts.trails = try std.fmt.parseInt(u32, n, 10);
+        if (opts.trails > HISTORY_MAX) opts.trails = HISTORY_MAX;
+    }
+
+    if (args.option("--top-window")) |b| {
+        opts.top_window = std.mem.eql(u8, b, "t") or std.mem.eql(u8, b, "true");
+    }
+
+    if (args.flag("--verbose")) {
+        opts.verbose = true;
+    }
+
     try pike.init();
     defer pike.deinit();
 
     const notifier = try pike.Notifier.init();
     defer notifier.deinit();
 
-    const fd: os.fd_t = udev.open_touchpad() catch |err| {
+    const fd: std.os.fd_t = udev.open_touchpad() catch |err| {
         std.debug.print("Unable to open touchpad: {s}\n", .{err});
         std.os.exit(1);
     };
     defer udev.close_touchpad(fd);
 
     // Initialize visual
-    ray.SetConfigFlags( //
-        ray.FLAG_WINDOW_RESIZABLE |
-        ray.FLAG_VSYNC_HINT |
-        ray.FLAG_WINDOW_TOPMOST |
-        ray.FLAG_MSAA_4X_HINT);
-    ray.InitWindow(
-        @floatToInt(c_int, dims.screen_width),
-        @floatToInt(c_int, dims.screen_height),
-        "Cleartouch - Touchpad Visualizer",
-    );
+    initWindow(dims.screen_width, dims.screen_height, opts.top_window);
     defer ray.CloseWindow();
-    ray.SetWindowMinSize(320, 240);
-    ray.SetTargetFPS(60);
 
     const handle: pike.Handle = .{ .inner = fd, .wake_fn = wake };
     try notifier.register(&handle, .{ .read = true, .write = false });
@@ -104,7 +136,8 @@ pub fn main() !void {
             );
 
             // Draw historical touch data
-            for (touch_history) |touches| {
+            for (touch_history) |touches, h| {
+                if (h >= opts.trails) break;
                 for (touches) |touch, i| {
                     if (!touch.used) continue;
 
@@ -166,7 +199,7 @@ pub fn main() !void {
 
             // Pump history
             {
-                var i: usize = HISTORY_LEN - 1;
+                var i: usize = HISTORY_MAX - 1;
                 while (i > 0) : (i -= 1) {
                     std.mem.copy(
                         mt.TouchData,
@@ -206,10 +239,13 @@ pub fn main() !void {
     }
 }
 
-fn wake(handle: *pike.Handle, batch: *pike.Batch, opts: pike.WakeOptions) void {
+fn wake(handle: *pike.Handle, batch: *pike.Batch, pike_opts: pike.WakeOptions) void {
     var events: [100]mt.InputEvent = undefined;
-    if (opts.read_ready) {
-        const bytes = os.read(handle.inner, std.mem.sliceAsBytes(events[0..])) catch 0;
+    if (pike_opts.read_ready) {
+        const bytes = std.os.read(
+            handle.inner,
+            std.mem.sliceAsBytes(events[0..]),
+        ) catch 0;
         if (bytes == 0) {
             std.debug.print("read 0 bytes\n", .{});
             return;
@@ -217,10 +253,13 @@ fn wake(handle: *pike.Handle, batch: *pike.Batch, opts: pike.WakeOptions) void {
 
         const inputEventSize: usize = @intCast(usize, @sizeOf(mt.InputEvent));
         const eventCount: usize = @divExact(bytes, inputEventSize);
-        // std.debug.print("fd: {d}, {d}\n", .{ handle.inner, bytes });
+
+        if (opts.verbose)
+            std.debug.print("Received {} bytes:", .{bytes});
 
         for (events[0..eventCount]) |event| {
-            // event.print();
+            if (opts.verbose)
+                event.print();
             machine.process(&event) catch |err| {
                 std.debug.print("can't process: {}\n", .{err});
             };
@@ -234,4 +273,23 @@ fn getPosFromTouch(touch: *const mt.TouchData) ray.Vector2 {
         .x = @intToFloat(f32, touch.position_x),
         .y = @intToFloat(f32, touch.position_y),
     };
+}
+
+fn initWindow(screen_width: f32, screen_height: f32, top_window: bool) void {
+    var flags: c_uint = //
+        ray.FLAG_WINDOW_RESIZABLE |
+        ray.FLAG_VSYNC_HINT |
+        ray.FLAG_MSAA_4X_HINT;
+
+    if (top_window)
+        flags |= ray.FLAG_WINDOW_TOPMOST;
+
+    ray.SetConfigFlags(flags);
+    ray.InitWindow(
+        @floatToInt(c_int, screen_width),
+        @floatToInt(c_int, screen_height),
+        "Cleartouch - Touchpad Visualizer",
+    );
+    ray.SetWindowMinSize(320, 240);
+    ray.SetTargetFPS(60);
 }
