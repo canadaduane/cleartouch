@@ -34,7 +34,7 @@ fn code_lookup(code: u16) ?[]const u8 {
     };
 }
 
-const MAX_TOUCH_POINTS = 10;
+pub const MAX_TOUCH_POINTS = 10;
 var _start_time: i64 = -1;
 
 pub const InputEvent = extern struct {
