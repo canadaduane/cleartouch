@@ -8,6 +8,8 @@ Cleartouch grabs your `/dev/input/event*` data stream and interprets the kernel 
 
 YouTube Demo: https://youtu.be/Cpn_lILPhEM
 
+NOTE: This project is part of the larger https://linuxtouchpad.org effort.
+
 ## Installation
 
 With the [zig](https://ziglang.org/download/) compiler installed:
