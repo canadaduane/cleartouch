@@ -18,7 +18,7 @@ Dependencies:
 sudo apt install libglfw3-dev libxi-dev libxinerama-dev libxrandr-dev libxcursor-dev
 ```
 
-With the [zig](https://ziglang.org/download/) compiler installed:
+With the [zig](https://ziglang.org/download/) 0.9.0 compiler installed:
 
 ```
 git clone https://github.com/canadaduane/cleartouch.git --recursive
