@@ -12,6 +12,12 @@ NOTE: This project is part of the larger https://linuxtouchpad.org effort.
 
 ## Installation
 
+Dependencies:
+
+```
+sudo apt install libglfw3-dev libxi-dev libxinerama-dev libxrandr-dev libxcursor-dev
+```
+
 With the [zig](https://ziglang.org/download/) compiler installed:
 
 ```
